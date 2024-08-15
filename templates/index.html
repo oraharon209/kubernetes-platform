@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kubernetes Namespace and Pod Manager</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        table, th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Create a Namespace and Pod</h1>
+    <form action="/create" method="post">
+        <label for="namespace">Namespace:</label>
+        <input type="text" id="namespace" name="namespace" required>
+        <br><br>
+        <label for="image">Image (name:tag):</label>
+        <input type="text" id="image" name="image" required>
+        <br><br>
+        <button type="submit">Create</button>
+    </form>
+
+    <h1>Delete a Namespace</h1>
+    <form action="/delete" method="post" id="deleteNamespaceForm">
+        <label for="deleteNamespace">Namespace:</label>
+        <select id="deleteNamespace" name="namespace" required>
+            {% for namespace in namespaces %}
+                <option value="{{ namespace }}">{{ namespace }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Delete</button>
+    </form>
+
+    <h1>Get Pods Status</h1>
+    <form action="/status/pods" method="get" id="podStatusForm">
+        <label for="podNamespace">Namespace:</label>
+        <select id="podNamespace" name="namespace" required>
+            {% for namespace in namespaces %}
+                <option value="{{ namespace }}">{{ namespace }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Get Pods Status</button>
+    </form>
+    <div id="podStatus"></div>
+
+    <h1>Get Services Status</h1>
+    <form action="/status/services" method="get" id="serviceStatusForm">
+        <label for="serviceNamespace">Namespace:</label>
+        <select id="serviceNamespace" name="namespace" required>
+            {% for namespace in namespaces %}
+                <option value="{{ namespace }}">{{ namespace }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Get Services Status</button>
+    </form>
+    <div id="serviceStatus"></div>
+
+    <!-- Script to handle AJAX requests and update status divs -->
+    <script>
+        // Function to make AJAX request and update status table
+        function fetchAndDisplayStatus(formId, statusDivId) {
+            var form = document.getElementById(formId);
+            var namespace = form.elements['namespace'].value;
+            var url = form.getAttribute('action') + '?namespace=' + encodeURIComponent(namespace);
+
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if ('pod_status' in data) {
+                        // Format pod status into a table
+                        var podStatusHtml = '<table><tr><th>NAME</th><th>READY</th><th>STATUS</th><th>RESTARTS</th><th>AGE</th></tr>';
+                        data.pod_status.trim().split('\n').forEach(function(line) {
+                            var fields = line.trim().split(/\s+/);
+                            if (fields.length >= 5) {
+                                podStatusHtml += '<tr>';
+                                podStatusHtml += '<td>' + fields[0] + '</td>';
+                                podStatusHtml += '<td>' + fields[1] + '</td>';
+                                podStatusHtml += '<td>' + fields[2] + '</td>';
+                                podStatusHtml += '<td>' + fields[3] + '</td>';
+                                podStatusHtml += '<td>' + fields[4] + '</td>';
+                                podStatusHtml += '</tr>';
+                            }
+                        });
+                        podStatusHtml += '</table>';
+                        document.getElementById(statusDivId).innerHTML = podStatusHtml;
+                    } else if ('service_status' in data) {
+                        // Format service status into a table
+                        var serviceStatusHtml = '<table><tr><th>NAME</th><th>TYPE</th><th>CLUSTER-IP</th><th>EXTERNAL-IP</th><th>PORT(S)</th><th>AGE</th></tr>';
+                        data.service_status.trim().split('\n').forEach(function(line) {
+                            var fields = line.trim().split(/\s+/);
+                            if (fields.length >= 6) {
+                                serviceStatusHtml += '<tr>';
+                                serviceStatusHtml += '<td>' + fields[0] + '</td>';
+                                serviceStatusHtml += '<td>' + fields[1] + '</td>';
+                                serviceStatusHtml += '<td>' + fields[2] + '</td>';
+                                serviceStatusHtml += '<td>' + fields[3] + '</td>';
+                                serviceStatusHtml += '<td>' + fields[4] + '</td>';
+                                serviceStatusHtml += '<td>' + fields[5] + '</td>';
+                                serviceStatusHtml += '</tr>';
+                            }
+                        });
+                        serviceStatusHtml += '</table>';
+                        document.getElementById(statusDivId).innerHTML = serviceStatusHtml;
+                    } else {
+                        throw new Error('Invalid response format');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching status:', error);
+                    document.getElementById(statusDivId).innerText = 'Error fetching status: ' + error.message;
+                });
+        }
+
+        // Attach event listeners to form submit buttons
+        document.getElementById('podStatusForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            fetchAndDisplayStatus('podStatusForm', 'podStatus');
+        });
+
+        document.getElementById('serviceStatusForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            fetchAndDisplayStatus('serviceStatusForm', 'serviceStatus');
+        });
+    </script>
+</body>
+</html>
