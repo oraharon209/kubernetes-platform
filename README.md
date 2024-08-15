@@ -16,6 +16,7 @@ Before using the Kubernetes Platform, ensure you have the following:
 - A Kubernetes cluster with the necessary permissions to create/delete namespaces and access pod/service statuses.
 - Docker installed on your local machine to build and run the containerized application.
 - Python 3.8+ for running the backend logic (if not using Docker).
+- Github Pages with your Helm charts
 
 ## Getting Started
 
